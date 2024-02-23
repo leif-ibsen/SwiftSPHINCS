@@ -11,7 +11,11 @@
 
 - ``init(kind:keyBytes:)``
 
-### Methods
+### Verify
 
 - ``Verify(message:signature:)``
 
+### Equality
+
+- ``==(_:_:)``
+- ``!=(_:_:)``

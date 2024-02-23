@@ -1,5 +1,7 @@
 # Performance
 
+Execution times for certain SwiftSPHINCS operations
+
 ## 
 
 SwiftSPHINCS's performance for key generation, signing a 2 kB message and signature verification was measured on an iMac 2021, Apple M1 chip.

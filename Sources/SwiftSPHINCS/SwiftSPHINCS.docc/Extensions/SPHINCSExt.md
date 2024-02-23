@@ -6,6 +6,6 @@
 
 - ``init(kind:)``
 
-### Methods
+### Generate Keys
 
 - ``GenerateKeyPair()``

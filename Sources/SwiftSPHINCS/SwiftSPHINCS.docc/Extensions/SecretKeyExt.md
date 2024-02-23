@@ -12,7 +12,11 @@
 
 - ``init(kind:keyBytes:)``
 
-### Methods
+### Sign
 
 - ``Sign(message:randomize:)``
 
+### Equality
+
+- ``==(_:_:)``
+- ``!=(_:_:)``

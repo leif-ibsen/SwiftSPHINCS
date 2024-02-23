@@ -5,9 +5,7 @@
 //  Created by Leif Ibsen on 01/02/2024.
 //
 
-///
-/// SPHINCS parameter sets
-///
+/// The SPHINCS parameter sets
 public enum SPHINCSKind: CaseIterable {
     /// SLH-DSA-SHA2-128s kind
     case SHA2_128s

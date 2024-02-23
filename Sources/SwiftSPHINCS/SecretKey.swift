@@ -58,5 +58,25 @@ public struct SecretKey: Equatable {
         return SPHINCS(kind: self.kind).slhSign(message, self.keyBytes, randomize)
     }
     
+    /// Equal
+    ///
+    /// - Parameters:
+    ///   - key1: First operand
+    ///   - key2: Second operand
+    /// - Returns: `true` if key1 = key2, `false` otherwise
+    public static func == (key1: SecretKey, key2: SecretKey) -> Bool {
+        return key1.keyBytes == key2.keyBytes && key1.kind == key2.kind
+    }
+
+    /// Not equal
+    ///
+    /// - Parameters:
+    ///   - key1: First operand
+    ///   - key2: Second operand
+    /// - Returns: `false` if key1 = key2, `true` otherwise
+    public static func != (key1: SecretKey, key2: SecretKey) -> Bool {
+        return key1.keyBytes != key2.keyBytes || key1.kind != key2.kind
+    }
+
 }
 
