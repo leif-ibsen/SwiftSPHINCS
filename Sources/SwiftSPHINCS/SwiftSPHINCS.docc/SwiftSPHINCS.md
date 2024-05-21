@@ -44,7 +44,7 @@ To use SwiftSPHINCS, in your project *Package.swift* file add a dependency like
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/leif-ibsen/SwiftSPHINCS", from: "1.1.0"),
+  .package(url: "https://github.com/leif-ibsen/SwiftSPHINCS", from: "1.2.0"),
 ]
 ```
 
@@ -52,7 +52,7 @@ SwiftSPHINCS itself depends on the Digest package
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/leif-ibsen/Digest", from: "1.3.0"),
+  .package(url: "https://github.com/leif-ibsen/Digest", from: "1.6.0"),
 ],
 ```
 

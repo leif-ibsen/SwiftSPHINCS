@@ -10,6 +10,7 @@ import Digest
 
 /// Unsigned 8 bit value
 public typealias Byte = UInt8
+
 /// Array of unsigned 8 bit values
 public typealias Bytes = [UInt8]
 
@@ -333,11 +334,10 @@ public struct SPHINCS {
         csum <<= 4
         msg += base2b(toByte(csum, 2), self.param.lgw, self.param.len2)
         var tmp: Bytes = []
-        var slice = sig.slice(0, self.param.n)
+        var sigSlice = sig.sliced()
         for i in 0 ..< self.param.len {
             adrs.setChainAddress(i)
-            tmp += chain(slice.bytes, msg[i], self.param.w - 1 - msg[i], PKseed, adrs)
-            slice.next()
+            tmp += chain(sigSlice.next(self.param.n), msg[i], self.param.w - 1 - msg[i], PKseed, adrs)
         }
         var wotspkADRS = adrs
         wotspkADRS.setType(ADRS.WOTS_PK)
@@ -395,8 +395,9 @@ public struct SPHINCS {
         var adrs = adrs
         adrs.setType(ADRS.WOTS_HASH)
         adrs.setKeyPairAddress(idx)
-        let sig = SIGxmss.slice(0, self.param.len * self.param.n).bytes
-        var AUTH = SIGxmss.slice(self.param.len * self.param.n, self.param.n)
+        var SIGxmssSlice = SIGxmss.sliced()
+        
+        let sig = SIGxmssSlice.next(self.param.len * self.param.n)
         var node0 = wotsPKFromSig(sig, M, PKseed, adrs)
         var node1: Bytes
         adrs.setType(ADRS.TREE)
@@ -405,12 +406,11 @@ public struct SPHINCS {
             adrs.setTreeHeight(k + 1)
             if (idx >> k) & 1 == 0 {
                 adrs.setTreeIndex(adrs.getTreeIndex() >> 1)
-                node1 = H(PKseed, adrs, node0 + AUTH)
+                node1 = H(PKseed, adrs, node0 + SIGxmssSlice.next(self.param.n))
             } else {
                 adrs.setTreeIndex((adrs.getTreeIndex() - 1) >> 1)
-                node1 = H(PKseed, adrs, AUTH + node0)
+                node1 = H(PKseed, adrs, SIGxmssSlice.next(self.param.n) + node0)
             }
-            AUTH.next()
             node0 = node1
         }
         return node0
@@ -454,9 +454,9 @@ public struct SPHINCS {
         var idxLeaf = idxLeaf
         var adrs = ADRS()
         adrs.setTreeAddress(idxTree)
-        var SIGtmp = SIGht.slice(0, (self.param.h1 + self.param.len) * self.param.n)
-        var node = xmssPKFromSig(idxLeaf, SIGtmp.bytes, M, PKseed, adrs)
-        SIGtmp.next()
+        var SIGhtSlice = SIGht.sliced()
+        let l = (self.param.h1 + self.param.len) * self.param.n
+        var node = xmssPKFromSig(idxLeaf, SIGhtSlice.next(l), M, PKseed, adrs)
         let mask1 = (1 << self.param.h1 - 1)
         let mask2 = (1 << (64 - self.param.h1) - 1)
         for j in 1 ..< self.param.d {
@@ -464,8 +464,7 @@ public struct SPHINCS {
             idxTree = (idxTree >> self.param.h1) & mask2
             adrs.setLayerAddress(j)
             adrs.setTreeAddress(idxTree)
-            node = xmssPKFromSig(idxLeaf, SIGtmp.bytes, node, PKseed, adrs)
-            SIGtmp.next()
+            node = xmssPKFromSig(idxLeaf, SIGhtSlice.next(l), node, PKseed, adrs)
         }
         return node == PKroot
     }
@@ -530,23 +529,21 @@ public struct SPHINCS {
         var root: Bytes = []
         var node0: Bytes
         var node1: Bytes = []
-        var sk = SIGfors.slice(0, self.param.n)
+        var SIGforsSlice = SIGfors.sliced()
         for i in 0 ..< self.param.k {
             adrs.setTreeHeight(0)
             adrs.setTreeIndex(i << self.param.a + indices[i])
-            node0 = F(PKseed, adrs, sk.bytes)
-            sk.next()
+            node0 = F(PKseed, adrs, SIGforsSlice.next(self.param.n))
             for j in 0 ..< self.param.a {
                 adrs.setTreeHeight(j + 1)
                 if (indices[i] >> j) & 1 == 0 {
                     adrs.setTreeIndex(adrs.getTreeIndex() >> 1)
-                    node1 = H(PKseed, adrs, node0 + sk.bytes)
+                    node1 = H(PKseed, adrs, node0 + SIGforsSlice.next(self.param.n))
                 } else {
                     adrs.setTreeIndex((adrs.getTreeIndex() - 1) >> 1)
-                    node1 = H(PKseed, adrs, sk.bytes + node0)
+                    node1 = H(PKseed, adrs, SIGforsSlice.next(self.param.n) + node0)
                 }
                 node0 = node1
-                sk.next()
             }
             root += node0
         }
@@ -566,22 +563,24 @@ public struct SPHINCS {
         } else {
             rnd = seed
         }
-        let SKseed = rnd.slice(0, self.param.n)
-        let SKprf = rnd.slice(self.param.n, self.param.n)
-        let PKseed = rnd.slice(self.param.n * 2, self.param.n)
+        var rndSlice = rnd.sliced()
+        let SKseed = rndSlice.next(self.param.n)
+        let SKprf = rndSlice.next(self.param.n)
+        let PKseed = rndSlice.next(self.param.n)
         var adrs = ADRS()
         adrs.setLayerAddress(self.param.d - 1)
-        let PKroot = xmssNode(SKseed.bytes, 0, self.param.h1, PKseed.bytes, adrs)
+        let PKroot = xmssNode(SKseed, 0, self.param.h1, PKseed, adrs)
         return (SKseed + SKprf + PKseed + PKroot, PKseed + PKroot)
     }
     
     // [FIPS 205] - Algorithm 18
     func slhSign(_ M: Bytes, _ SK: Bytes, _ randomize: Bool = true) -> Bytes {
         var adrs = ADRS()
-        let SKseed = SK.slice(0, self.param.n).bytes
-        let SKprf = SK.slice(self.param.n, self.param.n).bytes
-        let PKseed = SK.slice(self.param.n * 2, self.param.n).bytes
-        let PKroot = SK.slice(self.param.n * 3, self.param.n).bytes
+        var SKSlice = SK.sliced()
+        let SKseed = SKSlice.next(self.param.n)
+        let SKprf = SKSlice.next(self.param.n)
+        let PKseed = SKSlice.next(self.param.n)
+        let PKroot = SKSlice.next(self.param.n)
         var optRand: Bytes
         if randomize {
             optRand = Bytes(repeating: 0, count: PKseed.count)
@@ -592,9 +591,10 @@ public struct SPHINCS {
         let R = PRFmsg(SKprf, optRand, M)
         var SIG = R
         let digest = Hmsg(R, PKseed, PKroot, M)
-        let md = digest.slice(0, self.param.mdSize).bytes
-        let idxTree = toInt(digest.slice(self.param.mdSize, self.param.treeSize).bytes, self.param.treeSize) & self.param.treeMask
-        let idxLeaf = toInt(digest.slice(self.param.mdSize + self.param.treeSize, self.param.leafSize).bytes, self.param.leafSize) & self.param.leafMask
+        var digestSlice = digest.sliced()
+        let md = digestSlice.next(self.param.mdSize)
+        let idxTree = toInt(digestSlice.next(self.param.treeSize), self.param.treeSize) & self.param.treeMask
+        let idxLeaf = toInt(digestSlice.next(self.param.leafSize), self.param.leafSize) & self.param.leafMask
         adrs.setTreeAddress(idxTree)
         adrs.setType(ADRS.FORS_TREE)
         adrs.setKeyPairAddress(idxLeaf)
@@ -611,17 +611,20 @@ public struct SPHINCS {
         if SIG.count != self.param.n * (1 + self.param.k * (1 + self.param.a) + self.param.h + self.param.d * self.param.len) {
             return false
         }
-        let PKseed = PK.slice(0, self.param.n).bytes
-        let PKroot = PK.slice(self.param.n, self.param.n).bytes
+        var PKSlice = PK.sliced()
+        let PKseed = PKSlice.next(self.param.n)
+        let PKroot = PKSlice.next(self.param.n)
         var adrs = ADRS()
-        let R = SIG.slice(0, self.param.n).bytes
-        let ndx = self.param.n * (1 + self.param.k * (1 + self.param.a))
-        let SIGfors = SIG.slice(self.param.n, ndx - self.param.n).bytes
-        let SIGht = SIG.slice(ndx, SIG.count - ndx).bytes
+        var SIGSlice = SIG.sliced()
+        
+        let R = SIGSlice.next(self.param.n)
+        let SIGfors = SIGSlice.next(self.param.n * self.param.k * (1 + self.param.a))
+        let SIGht = SIGSlice.next(self.param.n * (self.param.h + self.param.len * self.param.d))
         let digest = Hmsg(R, PKseed, PKroot, M)
-        let md = digest.slice(0, self.param.mdSize).bytes
-        let idxTree = toInt(digest.slice(self.param.mdSize, self.param.treeSize).bytes, self.param.treeSize) & self.param.treeMask
-        let idxLeaf = toInt(digest.slice(self.param.mdSize + self.param.treeSize, self.param.leafSize).bytes, self.param.leafSize) & self.param.leafMask
+        var digestSlice = digest.sliced()
+        let md = digestSlice.next(self.param.mdSize)
+        let idxTree = toInt(digestSlice.next(self.param.treeSize), self.param.treeSize) & self.param.treeMask
+        let idxLeaf = toInt(digestSlice.next(self.param.leafSize), self.param.leafSize) & self.param.leafMask
         adrs.setTreeAddress(idxTree)
         adrs.setType(ADRS.FORS_TREE)
         adrs.setKeyPairAddress(idxLeaf)

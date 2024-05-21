@@ -13,7 +13,7 @@ let package = Package(
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
-        .package(url: "https://github.com/leif-ibsen/Digest", from: "1.3.0"),
+        .package(url: "https://github.com/leif-ibsen/Digest", from: "1.6.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -23,6 +23,12 @@ let package = Package(
             dependencies: ["Digest"]),
         .testTarget(
             name: "SwiftSPHINCSTests",
-            dependencies: ["SwiftSPHINCS"]),
+            dependencies: ["SwiftSPHINCS"],
+            resources: [.copy("Resources/katSHA2_128f.rsp"), .copy("Resources/katSHA2_128s.rsp"),
+                        .copy("Resources/katSHA2_192f.rsp"), .copy("Resources/katSHA2_192s.rsp"),
+                        .copy("Resources/katSHA2_256f.rsp"), .copy("Resources/katSHA2_256s.rsp"),
+                        .copy("Resources/katSHAKE_128f.rsp"), .copy("Resources/katSHAKE_128s.rsp"),
+                        .copy("Resources/katSHAKE_192f.rsp"), .copy("Resources/katSHAKE_192s.rsp"),
+                        .copy("Resources/katSHAKE_256f.rsp"), .copy("Resources/katSHAKE_256s.rsp")]),
     ]
 )

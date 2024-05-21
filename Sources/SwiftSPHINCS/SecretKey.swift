@@ -28,7 +28,7 @@ public struct SecretKey: Equatable {
         var adrs = ADRS()
         adrs.setLayerAddress(sphincs.param.d - 1)
         let PKroot = sphincs.xmssNode(SKseed, 0, sphincs.param.h1, PKseed, adrs)
-        guard PKroot == keyBytes.slice(sphincs.param.n * 3, sphincs.param.n).bytes else {
+        guard PKroot == Bytes(keyBytes[sphincs.param.n * 3 ..< sphincs.param.n * 4]) else {
             throw SPHINCSException.invalidSecretKey
         }
         self.publicKey = try PublicKey(kind: kind, keyBytes: PKseed + PKroot)
