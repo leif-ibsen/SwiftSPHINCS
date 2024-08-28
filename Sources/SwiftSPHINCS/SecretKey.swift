@@ -17,7 +17,7 @@ public struct SecretKey: Equatable {
     ///   - keyBytes: The key bytes
     /// - Throws: An exception if the key bytes has wrong size or are inconsistent
     public init(kind: SPHINCSKind, keyBytes: Bytes) throws {
-        guard keyBytes.count == Parameters.n(kind) << 2 else {
+        guard keyBytes.count == Parameters.keyByteCount(kind) << 1 else {
             throw SPHINCSException.secretKeySize
         }
         self.kind = kind
@@ -48,16 +48,58 @@ public struct SecretKey: Equatable {
 
     // MARK: Methods
     
-    /// Signs a message
+    /// Signs a message - pure version
     ///
     /// - Parameters:
     ///   - message: The message to sign
     ///   - randomize: If `true`, generate a randomized signature, else generate a deterministic signature, default is `true`
     /// - Returns: The signature
     public func Sign(message: Bytes, randomize: Bool = true) -> Bytes {
-        return SPHINCS(kind: self.kind).slhSign(message, self.keyBytes, randomize)
+        return SPHINCS(kind: self.kind).slhSign(message, [], self.keyBytes, randomize)
     }
     
+    /// Signs a message - pure version with context
+    ///
+    /// - Parameters:
+    ///   - message: The message to sign
+    ///   - context: The context string
+    ///   - randomize: If `true`, generate a randomized signature, else generate a deterministic signature, default is `true`
+    /// - Returns: The signature
+    /// - Throws: An exception if the context size is larger than 255
+    public func Sign(message: Bytes, context: Bytes, randomize: Bool = true) throws -> Bytes {
+        guard context.count < 256 else {
+            throw SPHINCSException.contextSize
+        }
+        return SPHINCS(kind: self.kind).slhSign(message, context, self.keyBytes, randomize)
+    }
+    
+    /// Signs a message - pre-hashed version
+    ///
+    /// - Parameters:
+    ///   - message: The message to sign
+    ///   - ph: The pre-hash function
+    ///   - randomize: If `true`, generate a randomized signature, else generate a deterministic signature, default is `true`
+    /// - Returns: The signature
+    public func SignPrehash(message: Bytes, ph: SPHINCSPreHash, randomize: Bool = true) -> Bytes {
+        return SPHINCS(kind: self.kind).hashSlhSign(message, [], ph, self.keyBytes, randomize)
+    }
+    
+    /// Signs a message - pre-hashed version with context
+    ///
+    /// - Parameters:
+    ///   - message: The message to sign
+    ///   - ph: The pre-hash function
+    ///   - context: The context string
+    ///   - randomize: If `true`, generate a randomized signature, else generate a deterministic signature, default is `true`
+    /// - Returns: The signature
+    /// - Throws: An exception if the context size is larger than 255
+    public func SignPrehash(message: Bytes, ph: SPHINCSPreHash, context: Bytes, randomize: Bool = true) throws -> Bytes {
+        guard context.count < 256 else {
+            throw SPHINCSException.contextSize
+        }
+        return SPHINCS(kind: self.kind).hashSlhSign(message, context, ph, self.keyBytes, randomize)
+    }
+
     /// Equal
     ///
     /// - Parameters:

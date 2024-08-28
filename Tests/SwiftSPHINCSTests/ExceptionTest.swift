@@ -39,6 +39,13 @@ final class ExceptionTest: XCTestCase {
             } catch {
                 XCTFail("Expected publicKeySize exception")
             }
+            do {
+                let _ = try sk.Sign(message: [], context: Bytes(repeating: 0, count: 256))
+                XCTFail("Expected contextSize exception")
+            } catch SPHINCSException.contextSize {
+            } catch {
+                XCTFail("Expected contextSize exception")
+            }
         }
     }
 

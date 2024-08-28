@@ -17,7 +17,7 @@ public struct PublicKey: Equatable {
     ///   - keyBytes: The key bytes
     /// - Throws: An exception if the key bytes has wrong size
     public init(kind: SPHINCSKind, keyBytes: Bytes) throws {
-        guard keyBytes.count == Parameters.n(kind) << 1 else {
+        guard keyBytes.count == Parameters.keyByteCount(kind) else {
             throw SPHINCSException.publicKeySize
         }
         self.kind = kind
@@ -35,13 +35,44 @@ public struct PublicKey: Equatable {
     
     // MARK: Methods
 
-    /// Verifies a signature
+    /// Verifies a signature - pure version
     /// - Parameters:
     ///   - message: The message to verify against
     ///   - signature: The signature to verify
     /// - Returns: `true` if the signature is verified, else `false`
     public func Verify(message: Bytes, signature: Bytes) -> Bool {
-        return SPHINCS(kind: self.kind).slhVerify(message, signature, self.keyBytes)
+        return SPHINCS(kind: self.kind).slhVerify(message, signature, [], self.keyBytes)
+    }
+
+    /// Verifies a signature - pure version with context
+    /// - Parameters:
+    ///   - message: The message to verify against
+    ///   - signature: The signature to verify
+    ///   - context: The context string
+    /// - Returns: `true` if the signature is verified, else `false`
+    public func Verify(message: Bytes, signature: Bytes, context: Bytes) -> Bool {
+        return SPHINCS(kind: self.kind).slhVerify(message, signature, context, self.keyBytes)
+    }
+
+    /// Verifies a signature - pre-hashed version
+    /// - Parameters:
+    ///   - message: The message to verify against
+    ///   - signature: The signature to verify
+    ///   - ph: The pre-hash function
+    /// - Returns: `true` if the signature is verified, else `false`
+    public func VerifyPrehash(message: Bytes, signature: Bytes, ph: SPHINCSPreHash) -> Bool {
+        return SPHINCS(kind: self.kind).hashSlhVerify(message, signature, [], ph, self.keyBytes)
+    }
+
+    /// Verifies a signature - pre-hashed version with context
+    /// - Parameters:
+    ///   - message: The message to verify against
+    ///   - signature: The signature to verify
+    ///   - ph: The pre-hash function
+    ///   - context: The context string
+    /// - Returns: `true` if the signature is verified, else `false`
+    public func VerifyPrehash(message: Bytes, signature: Bytes, ph: SPHINCSPreHash, context: Bytes) -> Bool {
+        return SPHINCS(kind: self.kind).hashSlhVerify(message, signature, context, ph, self.keyBytes)
     }
 
     /// Equal

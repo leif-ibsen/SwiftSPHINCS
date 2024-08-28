@@ -54,7 +54,7 @@ struct ADRS {
         return Int(self.adrs[4])
     }
     
-    mutating func setType(_ x: Int) {
+    mutating func setTypeAndClear(_ x: Int) {
         self.adrs[4] = Word(x)
         self.adrs[5] = 0
         self.adrs[6] = 0

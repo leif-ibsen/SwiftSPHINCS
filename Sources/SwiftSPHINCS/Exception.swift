@@ -17,4 +17,7 @@ public enum SPHINCSException: Error {
     /// Wrong public key size
     case publicKeySize
 
+    /// Wrong context size
+    case contextSize
+
 }

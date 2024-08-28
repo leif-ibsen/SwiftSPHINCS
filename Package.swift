@@ -24,11 +24,6 @@ let package = Package(
         .testTarget(
             name: "SwiftSPHINCSTests",
             dependencies: ["SwiftSPHINCS"],
-            resources: [.copy("Resources/katSHA2_128f.rsp"), .copy("Resources/katSHA2_128s.rsp"),
-                        .copy("Resources/katSHA2_192f.rsp"), .copy("Resources/katSHA2_192s.rsp"),
-                        .copy("Resources/katSHA2_256f.rsp"), .copy("Resources/katSHA2_256s.rsp"),
-                        .copy("Resources/katSHAKE_128f.rsp"), .copy("Resources/katSHAKE_128s.rsp"),
-                        .copy("Resources/katSHAKE_192f.rsp"), .copy("Resources/katSHAKE_192s.rsp"),
-                        .copy("Resources/katSHAKE_256f.rsp"), .copy("Resources/katSHAKE_256s.rsp")]),
+            resources: [.copy("Resources/katTestKeyGen.rsp"), .copy("Resources/katTestSign.rsp"), .copy("Resources/katTestVerify.rsp")]),
     ]
 )

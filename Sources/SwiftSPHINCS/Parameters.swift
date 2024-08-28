@@ -58,14 +58,14 @@ struct Parameters {
                                 mdSize: 40, treeSize: 8, leafSize: 1, treeMask: -1,
                                 leafMask: 0xf, w: 16, len: 67, len1: 64, len2: 3)
 
-    static func n(_ kind: SPHINCSKind) -> Int {
+    static func keyByteCount(_ kind: SPHINCSKind) -> Int {
         switch kind {
         case .SHA2_128s, .SHAKE_128s, .SHA2_128f, .SHAKE_128f:
-            return 16
-        case .SHA2_192s, .SHAKE_192s, .SHA2_192f, .SHAKE_192f:
-            return 24
-        case .SHA2_256s, .SHAKE_256s, .SHA2_256f, .SHAKE_256f:
             return 32
+        case .SHA2_192s, .SHAKE_192s, .SHA2_192f, .SHAKE_192f:
+            return 48
+        case .SHA2_256s, .SHAKE_256s, .SHA2_256f, .SHAKE_256f:
+            return 64
         }
     }
 }
