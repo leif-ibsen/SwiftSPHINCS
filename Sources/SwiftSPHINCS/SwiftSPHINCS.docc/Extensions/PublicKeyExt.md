@@ -7,19 +7,22 @@ In the pre-hashed version a hash of the message is verified.
 
 ### Properties
 
-- ``kind``
 - ``keyBytes``
+- ``asn1``
+- ``pem``
+- ``description``
 
-### Constructor
+### Constructors
 
 - ``init(kind:keyBytes:)``
+- ``init(pem:)``
 
 ### Verify
 
 - ``Verify(message:signature:)``
 - ``Verify(message:signature:context:)``
-- ``VerifyPrehash(message:signature:ph:)``
-- ``VerifyPrehash(message:signature:ph:context:)``
+- ``Verify(message:signature:ph:)``
+- ``Verify(message:signature:ph:context:)``
 
 ### Equality
 

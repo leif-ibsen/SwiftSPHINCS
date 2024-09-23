@@ -6,7 +6,7 @@
 //
 
 /// The SPHINCS pre-hash functions
-public enum SPHINCSPreHash {
+public enum PreHash {
 
     /// SHA2-256 message digest
     case SHA256

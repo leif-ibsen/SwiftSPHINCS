@@ -4,10 +4,12 @@ SwiftSPHINCS is a Swift implementation of NIST FIPS 205: *Stateless Hash-Based D
 
 SwiftSPHINCS functionality:
 
+* Support for the 12 parameter sets defined in the standard
 * Create public and secret keys
 * Sign messages - deterministically or randomized, pure or pre-hashed, with or without context.
 * Verify signatures, pure or pre-hashed, with or without context
-* Supports all 12 parameter sets defined in the standard
+* Store keys in their PEM encoded ASN1 representation
+* Restore keys from their PEM encoded ASN1 representation
 
 SwiftSPHINCS requires Swift 5.0. It also requires that the `Int` and `UInt` types be 64 bit types.
 

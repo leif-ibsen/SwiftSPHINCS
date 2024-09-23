@@ -12,7 +12,7 @@ final class ContextTest: XCTestCase {
 
     func test() throws {
         let msg = SPHINCS.randomBytes(100)
-        let (sk, pk) = SPHINCS(kind: .SHA2_128f).GenerateKeyPair()
+        let (sk, pk) = SPHINCS.GenerateKeyPair(kind: .SHA2_128f)
         XCTAssertTrue(pk.Verify(message: msg, signature: try sk.Sign(message: msg, context: []), context: []))
         XCTAssertTrue(pk.Verify(message: msg, signature: try sk.Sign(message: msg, context: [1]), context: [1]))
         XCTAssertFalse(pk.Verify(message: msg, signature: try sk.Sign(message: msg, context: []), context: [1]))

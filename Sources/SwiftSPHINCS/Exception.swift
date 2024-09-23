@@ -6,18 +6,24 @@
 //
 
 /// The SPHINCS exceptions
-public enum SPHINCSException: Error {
+public enum Exception: Error {
+
+    /// Wrong ASN1 structure
+    case asn1Structure
+    
+    /// Wrong context size
+    case contextSize(value: Int)
 
     /// Invalid secret key bytes
     case invalidSecretKey
 
-    /// Wrong secret key size
-    case secretKeySize
+    /// Wrong PEM structure
+    case pemStructure
 
     /// Wrong public key size
-    case publicKeySize
+    case publicKeySize(value: Int)
 
-    /// Wrong context size
-    case contextSize
+    /// Wrong secret key size
+    case secretKeySize(value: Int)
 
 }

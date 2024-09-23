@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import ASN1
 import Digest
 
 /// Unsigned 8 bit value
@@ -17,7 +18,6 @@ public typealias Bytes = [UInt8]
 typealias Word = UInt32
 typealias Words = [UInt32]
 
-/// The SPHINCS structure
 public struct SPHINCS {
     
     static func randomBytes(_ n: Int) -> Bytes {
@@ -28,35 +28,55 @@ public struct SPHINCS {
         return bytes
     }
 
-    let kind: SPHINCSKind
+    let kind: Kind
+    let n: Int
+    let h: Int
+    let d: Int
+    let h1: Int
+    let a: Int
+    let k: Int
+    let lgw: Int
+    let m: Int
+    let mdSize: Int
+    let treeSize: Int
+    let leafSize: Int
+    let treeMask: Int
+    let leafMask: Int
+    let w: Int
+    let len: Int
+    let len1: Int
+    let len2: Int
+    let keySize: Int
+    let oid: ASN1ObjectIdentifier
     let shake128: SHAKE
     let shake256: SHAKE
     let sha256: MessageDigest
     let sha512: MessageDigest
-    let param: Parameters
     
     // MARK: Initializer
-    
-    /// Constructs a SPHINCS instance of a specified kind
-    ///
-    /// - Parameters:
-    ///   - kind: The SPHINCS kind
-    public init(kind: SPHINCSKind) {
+
+    init(_ kind: Kind) {
+        let param = Parameters.paramsFromKind(kind)
         self.kind = kind
-        switch kind {
-        case .SHA2_128s, .SHAKE_128s:
-            self.param = Parameters.P1
-        case .SHA2_128f, .SHAKE_128f:
-            self.param = Parameters.P2
-        case .SHA2_192s, .SHAKE_192s:
-            self.param = Parameters.P3
-        case .SHA2_192f, .SHAKE_192f:
-            self.param = Parameters.P4
-        case .SHA2_256s, .SHAKE_256s:
-            self.param = Parameters.P5
-        case .SHA2_256f, .SHAKE_256f:
-            self.param = Parameters.P6
-        }
+        self.n = param.n
+        self.h = param.h
+        self.d = param.d
+        self.h1 = param.h1
+        self.a = param.a
+        self.k = param.k
+        self.lgw = param.lgw
+        self.m = param.m
+        self.mdSize = param.mdSize
+        self.treeSize = param.treeSize
+        self.leafSize = param.leafSize
+        self.treeMask = param.treeMask
+        self.leafMask = param.leafMask
+        self.w = param.w
+        self.len = param.len
+        self.len1 = param.len1
+        self.len2 = param.len2
+        self.keySize = param.keySize
+        self.oid = param.oid
         self.shake128 = SHAKE(.SHAKE128)
         self.shake256 = SHAKE(.SHAKE256)
         self.sha256 = MessageDigest(.SHA2_256)
@@ -66,13 +86,17 @@ public struct SPHINCS {
     
     // MARK: Methods
     
-    /// Generates a secret key and a public key
+    /// Generates a secret key and a public key of a specified kind
     ///
+    /// - Parameters:
+    ///   - kind: The SPHINCS kind
     /// - Returns: The secret key `sk` and the public key `pk`
-    public func GenerateKeyPair() -> (sk: SecretKey, pk: PublicKey) {
-        let (sk, pk) = slhKeyGen()
+    public static func GenerateKeyPair(kind: Kind) -> (sk: SecretKey, pk: PublicKey) {
+        let sphincs = SPHINCS(kind)
+        let (sk, _) = sphincs.slhKeyGen()
         do {
-            return (try SecretKey(kind: self.kind, keyBytes: sk), try PublicKey(kind: self.kind, keyBytes: pk))
+            let secretKey = try SecretKey(sphincs, sk)
+            return (secretKey, secretKey.publicKey)
         } catch {
             // Shouldn't happen
             fatalError("GenerateKeyPair inconsistency")
@@ -80,7 +104,7 @@ public struct SPHINCS {
     }
     
     func Trunc(_ x: Bytes) -> Bytes {
-        return Bytes(x[0 ..< self.param.n])
+        return Bytes(x[0 ..< self.n])
     }
     
     func Hmsg(_ R: Bytes, _ PKseed: Bytes, _ PKroot: Bytes, _ M: Bytes) -> Bytes {
@@ -90,19 +114,19 @@ public struct SPHINCS {
             self.shake256.update(PKseed)
             self.shake256.update(PKroot)
             self.shake256.update(M)
-            return self.shake256.digest(self.param.m)
+            return self.shake256.digest(self.m)
         case .SHA2_128s, .SHA2_128f:
             self.sha256.update(R)
             self.sha256.update(PKseed)
             self.sha256.update(PKroot)
             self.sha256.update(M)
-            return KDF.MGF1(.SHA2_256, R + PKseed + self.sha256.digest(), self.param.m)
+            return KDF.MGF1(.SHA2_256, R + PKseed + self.sha256.digest(), self.m)
         case .SHA2_192s, .SHA2_192f, .SHA2_256s, .SHA2_256f:
             self.sha512.update(R)
             self.sha512.update(PKseed)
             self.sha512.update(PKroot)
             self.sha512.update(M)
-            return KDF.MGF1(.SHA2_512, R + PKseed + self.sha512.digest(), self.param.m)
+            return KDF.MGF1(.SHA2_512, R + PKseed + self.sha512.digest(), self.m)
         }
     }
     
@@ -112,16 +136,16 @@ public struct SPHINCS {
             self.shake256.update(PKseed)
             self.shake256.update(adrs.bytes)
             self.shake256.update(SKseed)
-            return self.shake256.digest(self.param.n)
+            return self.shake256.digest(self.n)
         case .SHA2_128s, .SHA2_128f:
             self.sha256.update(PKseed)
-            self.sha256.update(toByte(0, 64 - self.param.n))
+            self.sha256.update(toByte(0, 64 - self.n))
             self.sha256.update(adrs.compress())
             self.sha256.update(SKseed)
             return Trunc(self.sha256.digest())
         case .SHA2_192s, .SHA2_192f, .SHA2_256s, .SHA2_256f:
             self.sha256.update(PKseed)
-            self.sha256.update(toByte(0, 64 - self.param.n))
+            self.sha256.update(toByte(0, 64 - self.n))
             self.sha256.update(adrs.compress())
             self.sha256.update(SKseed)
             return Trunc(self.sha256.digest())
@@ -134,7 +158,7 @@ public struct SPHINCS {
             self.shake256.update(SKprf)
             self.shake256.update(optRand)
             self.shake256.update(M)
-            return self.shake256.digest(self.param.n)
+            return self.shake256.digest(self.n)
         case .SHA2_128s, .SHA2_128f:
             let hmac = HMAC(.SHA2_256, SKprf)
             hmac.update(optRand)
@@ -149,22 +173,22 @@ public struct SPHINCS {
     }
     
     func F(_ PKseed: Bytes, _ adrs: ADRS, _ M1: Bytes) -> Bytes {
-        assert(M1.count == self.param.n)
+        assert(M1.count == self.n)
         switch self.kind {
         case .SHAKE_128s, .SHAKE_128f, .SHAKE_192s, .SHAKE_192f, .SHAKE_256s, .SHAKE_256f:
             self.shake256.update(PKseed)
             self.shake256.update(adrs.bytes)
             self.shake256.update(M1)
-            return self.shake256.digest(self.param.n)
+            return self.shake256.digest(self.n)
         case .SHA2_128s, .SHA2_128f:
             self.sha256.update(PKseed)
-            self.sha256.update(toByte(0, 64 - self.param.n))
+            self.sha256.update(toByte(0, 64 - self.n))
             self.sha256.update(adrs.compress())
             self.sha256.update(M1)
             return Trunc(self.sha256.digest())
         case .SHA2_192s, .SHA2_192f, .SHA2_256s, .SHA2_256f:
             self.sha256.update(PKseed)
-            self.sha256.update(toByte(0, 64 - self.param.n))
+            self.sha256.update(toByte(0, 64 - self.n))
             self.sha256.update(adrs.compress())
             self.sha256.update(M1)
             return Trunc(self.sha256.digest())
@@ -172,22 +196,22 @@ public struct SPHINCS {
     }
     
     func H(_ PKseed: Bytes, _ adrs: ADRS, _ M2: Bytes) -> Bytes {
-        assert(M2.count == self.param.n << 1)
+        assert(M2.count == self.n << 1)
         switch self.kind {
         case .SHAKE_128s, .SHAKE_128f, .SHAKE_192s, .SHAKE_192f, .SHAKE_256s, .SHAKE_256f:
             self.shake256.update(PKseed)
             self.shake256.update(adrs.bytes)
             self.shake256.update(M2)
-            return self.shake256.digest(self.param.n)
+            return self.shake256.digest(self.n)
         case .SHA2_128s, .SHA2_128f:
             self.sha256.update(PKseed)
-            self.sha256.update(toByte(0, 64 - self.param.n))
+            self.sha256.update(toByte(0, 64 - self.n))
             self.sha256.update(adrs.compress())
             self.sha256.update(M2)
             return Trunc(self.sha256.digest())
         case .SHA2_192s, .SHA2_192f, .SHA2_256s, .SHA2_256f:
             self.sha512.update(PKseed)
-            self.sha512.update(toByte(0, 128 - self.param.n))
+            self.sha512.update(toByte(0, 128 - self.n))
             self.sha512.update(adrs.compress())
             self.sha512.update(M2)
             return Trunc(self.sha512.digest())
@@ -195,22 +219,22 @@ public struct SPHINCS {
     }
     
     func T(_ PKseed: Bytes, _ adrs: ADRS, _ M: Bytes) -> Bytes {
-        assert(M.count % self.param.n == 0)
+        assert(M.count % self.n == 0)
         switch self.kind {
         case .SHAKE_128s, .SHAKE_128f, .SHAKE_192s, .SHAKE_192f, .SHAKE_256s, .SHAKE_256f:
             self.shake256.update(PKseed)
             self.shake256.update(adrs.bytes)
             self.shake256.update(M)
-            return self.shake256.digest(self.param.n)
+            return self.shake256.digest(self.n)
         case .SHA2_128s, .SHA2_128f:
             self.sha256.update(PKseed)
-            self.sha256.update(toByte(0, 64 - self.param.n))
+            self.sha256.update(toByte(0, 64 - self.n))
             self.sha256.update(adrs.compress())
             self.sha256.update(M)
             return Trunc(self.sha256.digest())
         case .SHA2_192s, .SHA2_192f, .SHA2_256s, .SHA2_256f:
             self.sha512.update(PKseed)
-            self.sha512.update(toByte(0, 128 - self.param.n))
+            self.sha512.update(toByte(0, 128 - self.n))
             self.sha512.update(adrs.compress())
             self.sha512.update(M)
             return Trunc(self.sha512.digest())
@@ -260,8 +284,8 @@ public struct SPHINCS {
     
     // [FIPS 205] - Algorithm 5
     func chain(_ X: Bytes, _ i: Int , _ s: Int, _ PKseed: Bytes, _ adrs: ADRS) -> Bytes {
-        assert(PKseed.count == self.param.n)
-        assert(i + s < self.param.w)
+        assert(PKseed.count == self.n)
+        assert(i + s < self.w)
         var adrs = adrs
         var tmp = X
         for j in i ..< i + s {
@@ -273,19 +297,19 @@ public struct SPHINCS {
     
     // [FIPS 205] - Algorithm 6
     func wotsPKgen(_ SKseed: Bytes, _ PKseed: Bytes, _ adrs: ADRS) -> Bytes {
-        assert(SKseed.count == self.param.n)
-        assert(PKseed.count == self.param.n)
+        assert(SKseed.count == self.n)
+        assert(PKseed.count == self.n)
         assert(adrs.getType() == ADRS.WOTS_HASH)
         var adrs = adrs
         var skADRS = adrs
         skADRS.setTypeAndClear(ADRS.WOTS_PRF)
         skADRS.setKeyPairAddress(adrs.getKeyPairAddress())
         var tmp: Bytes = []
-        for i in 0 ..< self.param.len {
+        for i in 0 ..< self.len {
             skADRS.setChainAddress(i)
             let sk = PRF(PKseed, SKseed, skADRS)
             adrs.setChainAddress(i)
-            tmp += chain(sk, 0, self.param.w - 1, PKseed, adrs)
+            tmp += chain(sk, 0, self.w - 1, PKseed, adrs)
         }
         var wotspkADRS = adrs
         wotspkADRS.setTypeAndClear(ADRS.WOTS_PK)
@@ -295,51 +319,51 @@ public struct SPHINCS {
     
     // [FIPS 205] - Algorithm 7
     func wotsSign(_ M: Bytes, _ SKseed: Bytes, _ PKseed: Bytes, _ adrs: ADRS) -> Bytes {
-        assert(M.count == self.param.n)
-        assert(SKseed.count == self.param.n)
-        assert(PKseed.count == self.param.n)
+        assert(M.count == self.n)
+        assert(SKseed.count == self.n)
+        assert(PKseed.count == self.n)
         assert(adrs.getType() == ADRS.WOTS_HASH)
         var adrs = adrs
         var csum = 0
         var sig: Bytes = []
-        var msg = base2b(M, self.param.lgw, self.param.len1)
-        for i in 0 ..< self.param.len1 {
-            csum += self.param.w - 1 - msg[i]
+        var msg = base2b(M, self.lgw, self.len1)
+        for i in 0 ..< self.len1 {
+            csum += self.w - 1 - msg[i]
         }
         csum <<= 4
-        msg += base2b(toByte(csum, 2), self.param.lgw, self.param.len2)
+        msg += base2b(toByte(csum, 2), self.lgw, self.len2)
         var skADRS = adrs
         skADRS.setTypeAndClear(ADRS.WOTS_PRF)
         skADRS.setKeyPairAddress(adrs.getKeyPairAddress())
-        for i in 0 ..< self.param.len {
+        for i in 0 ..< self.len {
             skADRS.setChainAddress(i)
             let sk = PRF(PKseed, SKseed, skADRS)
             adrs.setChainAddress(i)
             sig += chain(sk, 0, msg[i], PKseed, adrs)
         }
-        assert(sig.count == self.param.n * self.param.len)
+        assert(sig.count == self.n * self.len)
         return sig
     }
     
     // [FIPS 205] - Algorithm 8
     func wotsPKFromSig(_ sig: Bytes, _ M: Bytes, _ PKseed: Bytes, _ adrs: ADRS) -> Bytes {
-        assert(sig.count == self.param.n * self.param.len)
-        assert(M.count == self.param.n)
-        assert(PKseed.count == self.param.n)
+        assert(sig.count == self.n * self.len)
+        assert(M.count == self.n)
+        assert(PKseed.count == self.n)
         assert(adrs.getType() == ADRS.WOTS_HASH)
         var adrs = adrs
         var csum = 0
-        var msg = base2b(M, self.param.lgw, self.param.len1)
-        for i in 0 ..< self.param.len1 {
-            csum += self.param.w - 1 - msg[i]
+        var msg = base2b(M, self.lgw, self.len1)
+        for i in 0 ..< self.len1 {
+            csum += self.w - 1 - msg[i]
         }
         csum <<= 4
-        msg += base2b(toByte(csum, 2), self.param.lgw, self.param.len2)
+        msg += base2b(toByte(csum, 2), self.lgw, self.len2)
         var tmp: Bytes = []
         var sigSlice = sig.sliced()
-        for i in 0 ..< self.param.len {
+        for i in 0 ..< self.len {
             adrs.setChainAddress(i)
-            tmp += chain(sigSlice.next(self.param.n), msg[i], self.param.w - 1 - msg[i], PKseed, adrs)
+            tmp += chain(sigSlice.next(self.n), msg[i], self.w - 1 - msg[i], PKseed, adrs)
         }
         var wotspkADRS = adrs
         wotspkADRS.setTypeAndClear(ADRS.WOTS_PK)
@@ -349,10 +373,10 @@ public struct SPHINCS {
 
     // [FIPS 205] - Algorithm 9
     func xmssNode(_ SKseed: Bytes, _ i: Int, _ z: Int, _ PKseed: Bytes, _ adrs: ADRS) -> Bytes {
-        assert(SKseed.count == self.param.n)
-        assert(PKseed.count == self.param.n)
-        assert(z <= self.param.h1)
-        assert(i < 1 << (self.param.h1 - z))
+        assert(SKseed.count == self.n)
+        assert(PKseed.count == self.n)
+        assert(z <= self.h1)
+        assert(i < 1 << (self.h1 - z))
         var adrs = adrs
         if z == 0 {
             adrs.setTypeAndClear(ADRS.WOTS_HASH)
@@ -370,13 +394,13 @@ public struct SPHINCS {
     
     // [FIPS 205] - Algorithm 10
     func xmssSign(_ M: Bytes, _ SKseed: Bytes, _ idx: Int, _ PKseed: Bytes, _ adrs: ADRS) -> Bytes {
-        assert(M.count == self.param.n)
-        assert(SKseed.count == self.param.n)
-        assert(PKseed.count == self.param.n)
+        assert(M.count == self.n)
+        assert(SKseed.count == self.n)
+        assert(PKseed.count == self.n)
         assert(idx >= 0)
         var adrs = adrs
         var AUTH: Bytes = []
-        for j in 0 ..< self.param.h1 {
+        for j in 0 ..< self.h1 {
             let k = (idx >> j) ^ 1
             AUTH += xmssNode(SKseed, k, j, PKseed, adrs)
         }
@@ -384,33 +408,33 @@ public struct SPHINCS {
         adrs.setKeyPairAddress(idx)
         let sig = wotsSign(M, SKseed, PKseed, adrs)
         let SIGxmss = sig + AUTH
-        assert(SIGxmss.count == self.param.n * (self.param.len + self.param.h1))
+        assert(SIGxmss.count == self.n * (self.len + self.h1))
         return SIGxmss
     }
 
     // [FIPS 205] - Algorithm 11
     func xmssPKFromSig(_ idx: Int, _ SIGxmss: Bytes, _ M: Bytes, _ PKseed: Bytes, _ adrs: ADRS) -> Bytes {
-        assert(SIGxmss.count == (self.param.len + self.param.h1) * self.param.n)
-        assert(M.count == self.param.n)
-        assert(PKseed.count == self.param.n)
+        assert(SIGxmss.count == (self.len + self.h1) * self.n)
+        assert(M.count == self.n)
+        assert(PKseed.count == self.n)
         var adrs = adrs
         adrs.setTypeAndClear(ADRS.WOTS_HASH)
         adrs.setKeyPairAddress(idx)
         var SIGxmssSlice = SIGxmss.sliced()
         
-        let sig = SIGxmssSlice.next(self.param.len * self.param.n)
+        let sig = SIGxmssSlice.next(self.len * self.n)
         var node0 = wotsPKFromSig(sig, M, PKseed, adrs)
         var node1: Bytes
         adrs.setTypeAndClear(ADRS.TREE)
         adrs.setTreeIndex(idx)
-        for k in 0 ..< self.param.h1 {
+        for k in 0 ..< self.h1 {
             adrs.setTreeHeight(k + 1)
             if (idx >> k) & 1 == 0 {
                 adrs.setTreeIndex(adrs.getTreeIndex() >> 1)
-                node1 = H(PKseed, adrs, node0 + SIGxmssSlice.next(self.param.n))
+                node1 = H(PKseed, adrs, node0 + SIGxmssSlice.next(self.n))
             } else {
                 adrs.setTreeIndex((adrs.getTreeIndex() - 1) >> 1)
-                node1 = H(PKseed, adrs, SIGxmssSlice.next(self.param.n) + node0)
+                node1 = H(PKseed, adrs, SIGxmssSlice.next(self.n) + node0)
             }
             node0 = node1
         }
@@ -419,9 +443,9 @@ public struct SPHINCS {
     
     // [FIPS 205] - Algorithm 12
     func htSign(_ M: Bytes, _ SKseed: Bytes, _ PKseed: Bytes, _ idxTree: Int, _ idxLeaf: Int) -> Bytes {
-        assert(M.count == self.param.n)
-        assert(SKseed.count == self.param.n)
-        assert(PKseed.count == self.param.n)
+        assert(M.count == self.n)
+        assert(SKseed.count == self.n)
+        assert(PKseed.count == self.n)
         var idxTree = idxTree
         var idxLeaf = idxLeaf
         var adrs = ADRS()
@@ -429,16 +453,16 @@ public struct SPHINCS {
         var SIGtmp = xmssSign(M, SKseed, idxLeaf, PKseed, adrs)
         var SIGht = SIGtmp
         var root = xmssPKFromSig(idxLeaf, SIGtmp, M, PKseed, adrs)
-        let mask1 = 1 << self.param.h1 - 1
-        let mask2 = 1 << (64 - self.param.h1) - 1
-        for j in 1 ..< self.param.d {
+        let mask1 = 1 << self.h1 - 1
+        let mask2 = 1 << (64 - self.h1) - 1
+        for j in 1 ..< self.d {
             idxLeaf = idxTree & mask1
-            idxTree = (idxTree >> self.param.h1) & mask2
+            idxTree = (idxTree >> self.h1) & mask2
             adrs.setLayerAddress(j)
             adrs.setTreeAddress(idxTree)
             SIGtmp = xmssSign(root, SKseed, idxLeaf, PKseed, adrs)
             SIGht += SIGtmp
-            if j < self.param.d - 1 {
+            if j < self.d - 1 {
                 root = xmssPKFromSig(idxLeaf, SIGtmp, root, PKseed, adrs)
             }
         }
@@ -447,22 +471,22 @@ public struct SPHINCS {
     
     // [FIPS 205] - Algorithm 13
     func htVerify(_ M: Bytes, _ SIGht: Bytes, _ PKseed: Bytes, _ idxTree: Int, _ idxLeaf: Int, _ PKroot: Bytes) -> Bool {
-        assert(M.count == self.param.n)
-        assert(SIGht.count == (self.param.h + self.param.d * self.param.len) * self.param.n)
-        assert(PKseed.count == self.param.n)
-        assert(PKroot.count == self.param.n)
+        assert(M.count == self.n)
+        assert(SIGht.count == (self.h + self.d * self.len) * self.n)
+        assert(PKseed.count == self.n)
+        assert(PKroot.count == self.n)
         var idxTree = idxTree
         var idxLeaf = idxLeaf
         var adrs = ADRS()
         adrs.setTreeAddress(idxTree)
         var SIGhtSlice = SIGht.sliced()
-        let l = (self.param.h1 + self.param.len) * self.param.n
+        let l = (self.h1 + self.len) * self.n
         var node = xmssPKFromSig(idxLeaf, SIGhtSlice.next(l), M, PKseed, adrs)
-        let mask1 = (1 << self.param.h1 - 1)
-        let mask2 = (1 << (64 - self.param.h1) - 1)
-        for j in 1 ..< self.param.d {
+        let mask1 = (1 << self.h1 - 1)
+        let mask2 = (1 << (64 - self.h1) - 1)
+        for j in 1 ..< self.d {
             idxLeaf = idxTree & mask1
-            idxTree = (idxTree >> self.param.h1) & mask2
+            idxTree = (idxTree >> self.h1) & mask2
             adrs.setLayerAddress(j)
             adrs.setTreeAddress(idxTree)
             node = xmssPKFromSig(idxLeaf, SIGhtSlice.next(l), node, PKseed, adrs)
@@ -472,8 +496,8 @@ public struct SPHINCS {
     
     // [FIPS 205] - Algorithm 14
     func forsSKgen(_ SKseed: Bytes, _ PKseed: Bytes, _ adrs: ADRS, _ idx: Int) -> Bytes {
-        assert(SKseed.count == self.param.n)
-        assert(PKseed.count == self.param.n)
+        assert(SKseed.count == self.n)
+        assert(PKseed.count == self.n)
         var skAdrs = adrs
         skAdrs.setTypeAndClear(ADRS.FORS_PRF)
         skAdrs.setKeyPairAddress(adrs.getKeyPairAddress())
@@ -483,10 +507,10 @@ public struct SPHINCS {
     
     // [FIPS 205] - Algorithm 15
     func forsNode(_ SKseed: Bytes, _ i: Int, _ z: Int, _ PKseed: Bytes, _ adrs: ADRS) -> Bytes {
-        assert(SKseed.count == self.param.n)
-        assert(PKseed.count == self.param.n)
+        assert(SKseed.count == self.n)
+        assert(PKseed.count == self.n)
         var adrs = adrs
-        if z > self.param.a || i >= self.param.k * (1 << (self.param.a - z)) {
+        if z > self.a || i >= self.k * (1 << (self.a - z)) {
             return []
         }
         if z == 0 {
@@ -505,16 +529,16 @@ public struct SPHINCS {
     
     // [FIPS 205] - Algorithm 16
     func forsSign(_ md: Bytes, _ SKseed: Bytes, _ PKseed: Bytes, _ adrs: ADRS) -> Bytes {
-        assert(SKseed.count == self.param.n)
-        assert(PKseed.count == self.param.n)
+        assert(SKseed.count == self.n)
+        assert(PKseed.count == self.n)
         var SIGfors: Bytes = []
-        let indices = base2b(md, self.param.a, self.param.k)
-        for i in 0 ..< self.param.k {
+        let indices = base2b(md, self.a, self.k)
+        for i in 0 ..< self.k {
             var AUTH: Bytes = []
-            SIGfors += forsSKgen(SKseed, PKseed, adrs, i << self.param.a + indices[i])
-            for j in 0 ..< self.param.a {
+            SIGfors += forsSKgen(SKseed, PKseed, adrs, i << self.a + indices[i])
+            for j in 0 ..< self.a {
                 let s = (indices[i] >> j) ^ 1
-                AUTH += forsNode(SKseed, i << (self.param.a - j) + s, j, PKseed, adrs)
+                AUTH += forsNode(SKseed, i << (self.a - j) + s, j, PKseed, adrs)
             }
             SIGfors += AUTH
         }
@@ -523,26 +547,26 @@ public struct SPHINCS {
     
     // [FIPS 205] - Algorithm 17
     func forsPKFromSig(_ SIGfors: Bytes, _ md: Bytes, _ PKseed: Bytes, _ adrs: ADRS) -> Bytes{
-        assert(PKseed.count == self.param.n)
-        assert(SIGfors.count == self.param.k * self.param.n * (self.param.a + 1))
+        assert(PKseed.count == self.n)
+        assert(SIGfors.count == self.k * self.n * (self.a + 1))
         var adrs = adrs
-        let indices = base2b(md, self.param.a, self.param.k)
+        let indices = base2b(md, self.a, self.k)
         var root: Bytes = []
         var node0: Bytes
         var node1: Bytes = []
         var SIGforsSlice = SIGfors.sliced()
-        for i in 0 ..< self.param.k {
+        for i in 0 ..< self.k {
             adrs.setTreeHeight(0)
-            adrs.setTreeIndex(i << self.param.a + indices[i])
-            node0 = F(PKseed, adrs, SIGforsSlice.next(self.param.n))
-            for j in 0 ..< self.param.a {
+            adrs.setTreeIndex(i << self.a + indices[i])
+            node0 = F(PKseed, adrs, SIGforsSlice.next(self.n))
+            for j in 0 ..< self.a {
                 adrs.setTreeHeight(j + 1)
                 if (indices[i] >> j) & 1 == 0 {
                     adrs.setTreeIndex(adrs.getTreeIndex() >> 1)
-                    node1 = H(PKseed, adrs, node0 + SIGforsSlice.next(self.param.n))
+                    node1 = H(PKseed, adrs, node0 + SIGforsSlice.next(self.n))
                 } else {
                     adrs.setTreeIndex((adrs.getTreeIndex() - 1) >> 1)
-                    node1 = H(PKseed, adrs, SIGforsSlice.next(self.param.n) + node0)
+                    node1 = H(PKseed, adrs, SIGforsSlice.next(self.n) + node0)
                 }
                 node0 = node1
             }
@@ -556,12 +580,12 @@ public struct SPHINCS {
     
     // [FIPS] - Algorithm 18
     func slhKeyGenInternal(_ SKseed: Bytes, _ SKprf: Bytes, _ PKseed: Bytes) -> (sk: Bytes, pk: Bytes) {
-        assert(SKseed.count == self.param.n)
-        assert(SKprf.count == self.param.n)
-        assert(PKseed.count == self.param.n)
+        assert(SKseed.count == self.n)
+        assert(SKprf.count == self.n)
+        assert(PKseed.count == self.n)
         var adrs = ADRS()
-        adrs.setLayerAddress(self.param.d - 1)
-        let PKroot = xmssNode(SKseed, 0, self.param.h1, PKseed, adrs)
+        adrs.setLayerAddress(self.d - 1)
+        let PKroot = xmssNode(SKseed, 0, self.h1, PKseed, adrs)
         return (SKseed + SKprf + PKseed + PKroot, PKseed + PKroot)
     }
 
@@ -569,18 +593,18 @@ public struct SPHINCS {
     func slhSignInternal(_ M: Bytes, _ SK: Bytes, _ randomize: Bool) -> Bytes {
         var adrs = ADRS()
         var SKSlice = SK.sliced()
-        let SKseed = SKSlice.next(self.param.n)
-        let SKprf = SKSlice.next(self.param.n)
-        let PKseed = SKSlice.next(self.param.n)
-        let PKroot = SKSlice.next(self.param.n)
+        let SKseed = SKSlice.next(self.n)
+        let SKprf = SKSlice.next(self.n)
+        let PKseed = SKSlice.next(self.n)
+        let PKroot = SKSlice.next(self.n)
         let optRand = randomize ? SPHINCS.randomBytes(PKseed.count) : PKseed
         let R = PRFmsg(SKprf, optRand, M)
         var SIG = R
         let digest = Hmsg(R, PKseed, PKroot, M)
         var digestSlice = digest.sliced()
-        let md = digestSlice.next(self.param.mdSize)
-        let idxTree = toInt(digestSlice.next(self.param.treeSize), self.param.treeSize) & self.param.treeMask
-        let idxLeaf = toInt(digestSlice.next(self.param.leafSize), self.param.leafSize) & self.param.leafMask
+        let md = digestSlice.next(self.mdSize)
+        let idxTree = toInt(digestSlice.next(self.treeSize), self.treeSize) & self.treeMask
+        let idxLeaf = toInt(digestSlice.next(self.leafSize), self.leafSize) & self.leafMask
         adrs.setTreeAddress(idxTree)
         adrs.setTypeAndClear(ADRS.FORS_TREE)
         adrs.setKeyPairAddress(idxLeaf)
@@ -594,22 +618,22 @@ public struct SPHINCS {
 
     // [FIPS] - Algorithm 20
     func slhVerifyInternal(_ M: Bytes, _ SIG: Bytes, _ PK: Bytes) -> Bool {
-        if SIG.count != self.param.n * (1 + self.param.k * (1 + self.param.a) + self.param.h + self.param.d * self.param.len) {
+        if SIG.count != self.n * (1 + self.k * (1 + self.a) + self.h + self.d * self.len) {
             return false
         }
         var PKSlice = PK.sliced()
-        let PKseed = PKSlice.next(self.param.n)
-        let PKroot = PKSlice.next(self.param.n)
+        let PKseed = PKSlice.next(self.n)
+        let PKroot = PKSlice.next(self.n)
         var adrs = ADRS()
         var SIGSlice = SIG.sliced()
-        let R = SIGSlice.next(self.param.n)
-        let SIGfors = SIGSlice.next(self.param.n * self.param.k * (1 + self.param.a))
-        let SIGht = SIGSlice.next(self.param.n * (self.param.h + self.param.len * self.param.d))
+        let R = SIGSlice.next(self.n)
+        let SIGfors = SIGSlice.next(self.n * self.k * (1 + self.a))
+        let SIGht = SIGSlice.next(self.n * (self.h + self.len * self.d))
         let digest = Hmsg(R, PKseed, PKroot, M)
         var digestSlice = digest.sliced()
-        let md = digestSlice.next(self.param.mdSize)
-        let idxTree = toInt(digestSlice.next(self.param.treeSize), self.param.treeSize) & self.param.treeMask
-        let idxLeaf = toInt(digestSlice.next(self.param.leafSize), self.param.leafSize) & self.param.leafMask
+        let md = digestSlice.next(self.mdSize)
+        let idxTree = toInt(digestSlice.next(self.treeSize), self.treeSize) & self.treeMask
+        let idxLeaf = toInt(digestSlice.next(self.leafSize), self.leafSize) & self.leafMask
         adrs.setTreeAddress(idxTree)
         adrs.setTypeAndClear(ADRS.FORS_TREE)
         adrs.setKeyPairAddress(idxLeaf)
@@ -619,9 +643,9 @@ public struct SPHINCS {
     
     // [FIPS 205] - Algorithm 21
     func slhKeyGen() -> (sk: Bytes, pk: Bytes) {
-        let SKseed = SPHINCS.randomBytes(self.param.n)
-        let SKprf = SPHINCS.randomBytes(self.param.n)
-        let PKseed = SPHINCS.randomBytes(self.param.n)
+        let SKseed = SPHINCS.randomBytes(self.n)
+        let SKprf = SPHINCS.randomBytes(self.n)
+        let PKseed = SPHINCS.randomBytes(self.n)
         return slhKeyGenInternal(SKseed, SKprf, PKseed)
     }
     
@@ -633,7 +657,7 @@ public struct SPHINCS {
     }
     
     // [FIPS 205] - Algorithm 23
-    func hashSlhSign(_ M: Bytes, _ ctx: Bytes, _ PH: SPHINCSPreHash, _ SK: Bytes, _ randomize: Bool) -> Bytes {
+    func hashSlhSign(_ M: Bytes, _ ctx: Bytes, _ PH: PreHash, _ SK: Bytes, _ randomize: Bool) -> Bytes {
         assert(ctx.count < 256)
         var OID: Bytes
         var phM: Bytes
@@ -667,7 +691,7 @@ public struct SPHINCS {
     }
     
     // [FIPS 205] - Algorithm 25
-    func hashSlhVerify(_ M: Bytes, _ SIG: Bytes, _ ctx: Bytes, _ PH: SPHINCSPreHash, _ PK: Bytes) -> Bool {
+    func hashSlhVerify(_ M: Bytes, _ SIG: Bytes, _ ctx: Bytes, _ PH: PreHash, _ PK: Bytes) -> Bool {
         if ctx.count > 255 {
             return false
         }

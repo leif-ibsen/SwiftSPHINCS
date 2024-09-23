@@ -53,29 +53,29 @@ final class Util: XCTestCase {
     static func makeSphincs(_ kind: String) -> SPHINCS {
         switch kind {
         case "SHA2_128f":
-            return SPHINCS(kind: .SHA2_128f)
+            return SPHINCS(Kind.SHA2_128f)
         case "SHA2_128s":
-            return SPHINCS(kind: .SHA2_128s)
+            return SPHINCS(Kind.SHA2_128s)
         case "SHA2_192f":
-            return SPHINCS(kind: .SHA2_192f)
+            return SPHINCS(Kind.SHA2_192f)
         case "SHA2_192s":
-            return SPHINCS(kind: .SHA2_192s)
+            return SPHINCS(Kind.SHA2_192s)
         case "SHA2_256f":
-            return SPHINCS(kind: .SHA2_256f)
+            return SPHINCS(Kind.SHA2_256f)
         case "SHA2_256s":
-            return SPHINCS(kind: .SHA2_256s)
+            return SPHINCS(Kind.SHA2_256s)
         case "SHAKE_128f":
-            return SPHINCS(kind: .SHAKE_128f)
+            return SPHINCS(Kind.SHAKE_128f)
         case "SHAKE_128s":
-            return SPHINCS(kind: .SHAKE_128s)
+            return SPHINCS(Kind.SHAKE_128s)
         case "SHAKE_192f":
-            return SPHINCS(kind: .SHAKE_192f)
+            return SPHINCS(Kind.SHAKE_192f)
         case "SHAKE_192s":
-            return SPHINCS(kind: .SHAKE_192s)
+            return SPHINCS(Kind.SHAKE_192s)
         case "SHAKE_256f":
-            return SPHINCS(kind: .SHAKE_256f)
+            return SPHINCS(Kind.SHAKE_256f)
         case "SHAKE_256s":
-            return SPHINCS(kind: .SHAKE_256s)
+            return SPHINCS(Kind.SHAKE_256s)
         default:
             fatalError("Wrong KATTEST kind " + kind)
         }
