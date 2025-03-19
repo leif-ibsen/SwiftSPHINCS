@@ -2,22 +2,21 @@
 
 ## 
 
-SwiftSPHINCS's performance for key generation, signing a 2 kB message and signature verification was measured on an iMac 2021, Apple M1 chip.
+SwiftSPHINCS's execution time for key generation, signing a 2 kB message and signature verification was measured on a MacBook Pro 2024, Apple M3 chip.
 
-The table below shows the figures in seconds or milliseconds for the twelve SPHINCS kinds.
+The table below shows the results in seconds or milliseconds for the twelve SPHINCS kinds.
 
-| Kind       | GenerateKeyPair | Sign     | Verify  |
-|:-----------|----------------:|---------:|--------:|
-| SHA2_128f  | 15 mSec         | 0.18 Sec | 11 mSec |
-| SHA2_128s  | 1.0 Sec         | 3.8 Sec  | 4 mSec  |
-| SHA2_192f  | 22 mSec         | 0.3 Sec  | 16 mSec |
-| SHA2_192s  | 1.4 Sec         | 6.7 Sec  | 5 mSec  |
-| SHA2_256f  | 58 mSec         | 0.60 Sec | 16 mSec |
-| SHA2_256s  | 0.93 Sec        | 5.9 Sec  | 8 mSec  |
-| SHAKE_128f | 42 mSec         | 0.48 Sec | 30 mSec |
-| SHAKE_128s | 2.7 Sec         | 10 Sec   | 10 mSec |
-| SHAKE_192f | 61 mSec         | 0.8 Sec  | 42 mSec |
-| SHAKE_192s | 3.9 Sec         | 18 Sec   | 14 mSec |
-| SHAKE_256f | 0.16 Sec        | 1.6 Sec  | 42 mSec |
-| SHAKE_256s | 2.6 Sec         | 15 Sec   | 20 mSec |
-
+| Kind       | GenerateKeyPair | Sign     | Verify   |
+|:-----------|----------------:|---------:|---------:|
+| SHA2_128f  | 8.8 mSec        | 0.11 Sec | 5.8 mSec |
+| SHA2_128s  | 0.5 Sec         | 2.0 Sec  | 2.1 mSec |
+| SHA2_192f  | 12 mSec         | 0.15 Sec | 8.1 mSec |
+| SHA2_192s  | 0.7 Sec         | 3.5 Sec  | 2.9 mSec |
+| SHA2_256f  | 30 mSec         | 0.30 Sec | 8.2 mSec |
+| SHA2_256s  | 0.5 Sec         | 3.0 Sec  | 4.2 mSec |
+| SHAKE_128f | 14 mSec         | 0.17 Sec | 9.9 mSec |
+| SHAKE_128s | 0.9 Sec         | 3.5 Sec  | 3.3 mSec |
+| SHAKE_192f | 21 mSec         | 0.3 Sec  | 14 mSec  |
+| SHAKE_192s | 1.4 Sec         | 6.1 Sec  | 4.7 mSec |
+| SHAKE_256f | 56 mSec         | 0.6 Sec  | 15 mSec  |
+| SHAKE_256s | 0.9 Sec         | 5.4 Sec  | 7.3 mSec |

@@ -171,7 +171,7 @@ public struct SPHINCS {
             return Trunc(hmac.compute())
         }
     }
-    
+
     func F(_ PKseed: Bytes, _ adrs: ADRS, _ M1: Bytes) -> Bytes {
         assert(M1.count == self.n)
         switch self.kind {
@@ -194,7 +194,7 @@ public struct SPHINCS {
             return Trunc(self.sha256.digest())
         }
     }
-    
+
     func H(_ PKseed: Bytes, _ adrs: ADRS, _ M2: Bytes) -> Bytes {
         assert(M2.count == self.n << 1)
         switch self.kind {

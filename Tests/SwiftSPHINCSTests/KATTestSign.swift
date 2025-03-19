@@ -8,6 +8,8 @@
 import XCTest
 @testable import SwiftSPHINCS
 
+// KAT test vectors from GitHub ACVP-server release 1.1.0.35.
+
 final class KATTestSign: XCTestCase {
 
     override func setUpWithError() throws {
