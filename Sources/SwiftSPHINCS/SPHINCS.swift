@@ -652,7 +652,7 @@ public struct SPHINCS {
     // [FIPS 205] - Algorithm 22
     func slhSign(_ M: Bytes, _ ctx: Bytes, _ SK: Bytes, _ randomize: Bool) -> Bytes {
         assert(ctx.count < 256)
-        let M1 = toByte(0, 1) + toByte(ctx.count, 1) + ctx + M
+        let M1 = [0] + [Byte(ctx.count)] + ctx + M
         return slhSignInternal(M1, SK, randomize)
     }
     
@@ -662,22 +662,38 @@ public struct SPHINCS {
         var OID: Bytes
         var phM: Bytes
         switch PH {
-        case .SHA256:
-            OID = [0, 6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 1]
-            phM = self.sha256.digest(M)
-        case .SHA512:
-            OID = [0, 6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 3]
-            phM = self.sha512.digest(M)
+        case .SHA2_224:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 4]
+            phM = MessageDigest(.SHA2_224).digest(M)
+        case .SHA2_256, .SHA256:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 1]
+            phM = MessageDigest(.SHA2_256).digest(M)
+        case .SHA2_384:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 2]
+            phM = MessageDigest(.SHA2_384).digest(M)
+        case .SHA2_512, .SHA512:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 3]
+            phM = MessageDigest(.SHA2_512).digest(M)
+        case .SHA3_224:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 7]
+            phM = MessageDigest(.SHA3_224).digest(M)
+        case .SHA3_256:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 8]
+            phM = MessageDigest(.SHA3_256).digest(M)
+        case .SHA3_384:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 9]
+            phM = MessageDigest(.SHA3_384).digest(M)
+        case .SHA3_512:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 10]
+            phM = MessageDigest(.SHA3_512).digest(M)
         case .SHAKE128:
-            OID = [0, 6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 11]
-            self.shake128.update(M)
-            phM = self.shake128.digest(256)
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 11]
+            phM = XOF(.XOF128, M).read(32)
         case .SHAKE256:
-            OID = [0, 6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 12]
-            self.shake256.update(M)
-            phM = self.shake256.digest(512)
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 12]
+            phM = XOF(.XOF256, M).read(64)
         }
-        let M1 = toByte(1, 1) + toByte(ctx.count, 1) + ctx + OID + phM
+        let M1 = [1] + [Byte(ctx.count)] + ctx + OID + phM
         return slhSignInternal(M1, SK, randomize)
     }
     
@@ -686,7 +702,7 @@ public struct SPHINCS {
         if ctx.count > 255 {
             return false
         }
-        let M1 = toByte(0, 1) + toByte(ctx.count, 1) + ctx + M
+        let M1 = [0] + [Byte(ctx.count)] + ctx + M
         return slhVerifyInternal(M1, SIG, PK)
     }
     
@@ -698,22 +714,38 @@ public struct SPHINCS {
         var OID: Bytes
         var phM: Bytes
         switch PH {
-        case .SHA256:
-            OID = [0, 6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 1]
-            phM = self.sha256.digest(M)
-        case .SHA512:
-            OID = [0, 6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 3]
-            phM = self.sha512.digest(M)
+        case .SHA2_224:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 4]
+            phM = MessageDigest(.SHA2_224).digest(M)
+        case .SHA2_256, .SHA256:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 1]
+            phM = MessageDigest(.SHA2_256).digest(M)
+        case .SHA2_384:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 2]
+            phM = MessageDigest(.SHA2_384).digest(M)
+        case .SHA2_512, .SHA512:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 3]
+            phM = MessageDigest(.SHA2_512).digest(M)
+        case .SHA3_224:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 7]
+            phM = MessageDigest(.SHA3_224).digest(M)
+        case .SHA3_256:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 8]
+            phM = MessageDigest(.SHA3_256).digest(M)
+        case .SHA3_384:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 9]
+            phM = MessageDigest(.SHA3_384).digest(M)
+        case .SHA3_512:
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 10]
+            phM = MessageDigest(.SHA3_512).digest(M)
         case .SHAKE128:
-            OID = [0, 6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 11]
-            self.shake128.update(M)
-            phM = self.shake128.digest(256)
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 11]
+            phM = XOF(.XOF128, M).read(32)
         case .SHAKE256:
-            OID = [0, 6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 12]
-            self.shake256.update(M)
-            phM = self.shake256.digest(512)
+            OID = [6, 9, 96, 134, 72, 1, 101, 3, 4, 2, 12]
+            phM = XOF(.XOF256, M).read(64)
         }
-        let M1 = toByte(1, 1) + toByte(ctx.count, 1) + ctx + OID + phM
+        let M1 = [1] + [Byte(ctx.count)] + ctx + OID + phM
         return slhVerifyInternal(M1, SIG, PK)
     }
     

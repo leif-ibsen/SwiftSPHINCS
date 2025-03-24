@@ -7,58 +7,58 @@
 
 import XCTest
 @testable import SwiftSPHINCS
+import Digest
 
-// KAT test vectors from GitHub ACVP-server release 1.1.0.35.
+// KAT test vectors from NIST ACVP-server version 1.1.0.38.
 
 final class KATTestVerify: XCTestCase {
 
     override func setUpWithError() throws {
         let url = Bundle.module.url(forResource: "katTestVerify", withExtension: "rsp")!
-        makeKatTests(try Data(contentsOf: url))
+        makeVerifyTests(try Data(contentsOf: url))
     }
 
-    struct katTest {
-        let kind: String
-        let pass: String
+    struct verifyTest {
+        let kind: Kind
+        let passed: String
         let pk: Bytes
         let message: Bytes
+        let context: Bytes
         let signature: Bytes
     }
 
-    var katTests: [katTest] = []
-
-    func makeKatTests(_ data: Data) {
+    var verifyTests: [verifyTest] = []
+    
+    func makeVerifyTests(_ data: Data) {
         let s = String(decoding: data, as: UTF8.self)
         var lines = s.components(separatedBy: .newlines)
-        let groups = lines.count / 7
+        let groups = lines.count / 8
         for i in 0 ..< groups {
-            let j = i * 7
-            lines[j + 1].removeFirst(5)
-            lines[j + 2].removeFirst(5)
-            lines[j + 3].removeFirst(3)
-            lines[j + 4].removeFirst(8)
-            lines[j + 5].removeFirst(10)
+            let j = i * 8
+            lines[j + 1].removeFirst(7)
+            lines[j + 2].removeFirst(13)
+            lines[j + 3].removeFirst(5)
+            lines[j + 4].removeFirst(10)
+            lines[j + 5].removeFirst(Swift.min(10, lines[j + 5].count))
+            lines[j + 6].removeFirst(12)
         }
         for i in 0 ..< groups {
-            let j = i * 7
-            let kind = lines[j + 1]
-            let pass = lines[j + 2]
-            let pk = Util.hex2bytes(lines[j + 3])
-            let message = Util.hex2bytes(lines[j + 4])
-            let signature = Util.hex2bytes(lines[j + 5])
-            katTests.append(katTest(kind: kind, pass: pass, pk: pk, message: message, signature: signature))
+            let j = i * 8
+            let kind = Util.sphincsKind(lines[j + 1])
+            let passed = lines[j + 2]
+            let pk = Base64.hex2bytes(lines[j + 3])!
+            let message = Base64.hex2bytes(lines[j + 4])!
+            let context = Base64.hex2bytes(lines[j + 5])!
+            let signature = Base64.hex2bytes(lines[j + 6])!
+            verifyTests.append(verifyTest(kind: kind, passed: passed, pk: pk, message: message, context: context, signature: signature))
         }
     }
 
-    func test() throws {
-        for t in katTests {
-            let sphincs = Util.makeSphincs(t.kind)
-            let ok = sphincs.slhVerifyInternal(t.message, t.signature, t.pk)
-            if ok {
-                XCTAssertEqual(t.pass, "true")
-            } else {
-                XCTAssertEqual(t.pass, "false")
-            }
+    func testVerify() {
+        for t in verifyTests {
+            let sphincs = SPHINCS(t.kind)
+            let ok = sphincs.slhVerify(t.message, t.signature, t.context, t.pk)
+            XCTAssertEqual(t.passed, ok ? "true" : "false")
         }
     }
 
