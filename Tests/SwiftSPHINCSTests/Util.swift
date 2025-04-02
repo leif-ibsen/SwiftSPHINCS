@@ -41,7 +41,10 @@ final class Util: XCTestCase {
         }
     }
     
-    static func preHash(_ hashAlg: String) -> PreHash {
+    static func preHash(_ hashAlg: String) -> PreHash? {
+        if hashAlg == "none" {
+            return nil
+        }
         if hashAlg == "SHA2-224" {
             return .SHA2_224
         }

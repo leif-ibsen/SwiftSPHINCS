@@ -21,7 +21,7 @@ To use SwiftSPHINCS, in your project *Package.swift* file add a dependency like
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/leif-ibsen/SwiftSPHINCS", from: "3.2.0"),
+  .package(url: "https://github.com/leif-ibsen/SwiftSPHINCS", from: "3.3.0"),
 ]
 ```
 

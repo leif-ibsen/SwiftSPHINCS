@@ -590,15 +590,15 @@ public struct SPHINCS {
     }
 
     // [FIPS] - Algorithm 19
-    func slhSignInternal(_ M: Bytes, _ SK: Bytes, _ randomize: Bool) -> Bytes {
+    func slhSignInternal(_ M: Bytes, _ SK: Bytes, _ addRnd: Bytes) -> Bytes {
+        assert(addRnd.count == 0 || addRnd.count == self.n)
         var adrs = ADRS()
         var SKSlice = SK.sliced()
         let SKseed = SKSlice.next(self.n)
         let SKprf = SKSlice.next(self.n)
         let PKseed = SKSlice.next(self.n)
         let PKroot = SKSlice.next(self.n)
-        let optRand = randomize ? SPHINCS.randomBytes(PKseed.count) : PKseed
-        let R = PRFmsg(SKprf, optRand, M)
+        let R = PRFmsg(SKprf, addRnd.count == 0 ? PKseed : addRnd, M)
         var SIG = R
         let digest = Hmsg(R, PKseed, PKroot, M)
         var digestSlice = digest.sliced()
@@ -653,7 +653,7 @@ public struct SPHINCS {
     func slhSign(_ M: Bytes, _ ctx: Bytes, _ SK: Bytes, _ randomize: Bool) -> Bytes {
         assert(ctx.count < 256)
         let M1 = [0] + [Byte(ctx.count)] + ctx + M
-        return slhSignInternal(M1, SK, randomize)
+        return slhSignInternal(M1, SK, randomize ? SPHINCS.randomBytes(self.n) : [])
     }
     
     // [FIPS 205] - Algorithm 23
@@ -694,7 +694,7 @@ public struct SPHINCS {
             phM = XOF(.XOF256, M).read(64)
         }
         let M1 = [1] + [Byte(ctx.count)] + ctx + OID + phM
-        return slhSignInternal(M1, SK, randomize)
+        return slhSignInternal(M1, SK, randomize ? SPHINCS.randomBytes(self.n) : [])
     }
     
     // [FIPS 205] - Algorithm 24

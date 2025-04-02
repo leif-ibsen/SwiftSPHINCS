@@ -19,11 +19,14 @@ final class KATTestVerify: XCTestCase {
     }
 
     struct verifyTest {
+        let tcId: String
         let kind: Kind
-        let passed: String
+        let interface: String
+        let passed: Bool
         let pk: Bytes
         let message: Bytes
         let context: Bytes
+        let hashAlg: PreHash?
         let signature: Bytes
     }
 
@@ -32,33 +35,48 @@ final class KATTestVerify: XCTestCase {
     func makeVerifyTests(_ data: Data) {
         let s = String(decoding: data, as: UTF8.self)
         var lines = s.components(separatedBy: .newlines)
-        let groups = lines.count / 8
+        let groups = lines.count / 10
         for i in 0 ..< groups {
-            let j = i * 8
+            let j = i * 10
+            lines[j].removeFirst(7)
             lines[j + 1].removeFirst(7)
-            lines[j + 2].removeFirst(13)
-            lines[j + 3].removeFirst(5)
-            lines[j + 4].removeFirst(10)
-            lines[j + 5].removeFirst(Swift.min(10, lines[j + 5].count))
-            lines[j + 6].removeFirst(12)
+            lines[j + 2].removeFirst(12)
+            lines[j + 3].removeFirst(13)
+            lines[j + 4].removeFirst(5)
+            lines[j + 5].removeFirst(10)
+            lines[j + 6].removeFirst(Swift.min(10, lines[j + 6].count))
+            lines[j + 7].removeFirst(10)
+            lines[j + 8].removeFirst(12)
         }
         for i in 0 ..< groups {
-            let j = i * 8
+            let j = i * 10
+            let tcId = lines[j]
             let kind = Util.sphincsKind(lines[j + 1])
-            let passed = lines[j + 2]
-            let pk = Base64.hex2bytes(lines[j + 3])!
-            let message = Base64.hex2bytes(lines[j + 4])!
-            let context = Base64.hex2bytes(lines[j + 5])!
-            let signature = Base64.hex2bytes(lines[j + 6])!
-            verifyTests.append(verifyTest(kind: kind, passed: passed, pk: pk, message: message, context: context, signature: signature))
+            let interface = lines[j + 2]
+            let passed = lines[j + 3] == "true"
+            let pk = Base64.hex2bytes(lines[j + 4])!
+            let message = Base64.hex2bytes(lines[j + 5])!
+            let context = Base64.hex2bytes(lines[j + 6])!
+            let hashAlg = Util.preHash(lines[j + 7])
+            let signature = Base64.hex2bytes(lines[j + 8])!
+            verifyTests.append(verifyTest(tcId: tcId, kind: kind, interface: interface, passed: passed, pk: pk, message: message, context: context, hashAlg: hashAlg, signature: signature))
         }
     }
 
     func testVerify() {
         for t in verifyTests {
             let sphincs = SPHINCS(t.kind)
-            let ok = sphincs.slhVerify(t.message, t.signature, t.context, t.pk)
-            XCTAssertEqual(t.passed, ok ? "true" : "false")
+            var ok: Bool
+            if t.hashAlg == nil {
+                if t.interface == "internal" {
+                    ok = sphincs.slhVerifyInternal(t.message, t.signature, t.pk)
+                } else {
+                    ok = sphincs.slhVerify(t.message, t.signature, t.context, t.pk)
+                }
+            } else {
+                ok = sphincs.hashSlhVerify(t.message, t.signature, t.context, t.hashAlg!, t.pk)
+            }
+            XCTAssertEqual(t.passed, ok)
         }
     }
 
