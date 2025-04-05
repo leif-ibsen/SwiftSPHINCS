@@ -57,6 +57,12 @@ final class Util: XCTestCase {
         if hashAlg == "SHA2-512" {
             return .SHA2_512
         }
+        if hashAlg == "SHA2-512/224" {
+            return .SHA2_512_224
+        }
+        if hashAlg == "SHA2-512/256" {
+            return .SHA2_512_256
+        }
         if hashAlg == "SHA3-224" {
             return .SHA3_224
         }
